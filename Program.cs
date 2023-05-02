@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using BaltaDataAccess.Models;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -14,9 +15,13 @@ namespace BaltaDataAccess
             using (var connection = new SqlConnection(connectionString))
             {
                 //UpdateCategory(connection);
-                ListCategories(connection);
+                //ListCategories(connection);
                 //CreateCategory(connection);
-                CreateManyCategory(connection);
+                //CreateManyCategory(connection);
+                //GetCategory(connection);
+                //DeleteCategory(connection);
+                //ExecuteProcedure(connection);
+                ExecuteReadProcedure(connection);
             }
         }
 
@@ -27,6 +32,19 @@ namespace BaltaDataAccess
             {
                 Console.WriteLine($"{item.Id} - {item.Title}");
             }
+        }
+
+        static void GetCategory(SqlConnection connection)
+        {
+            var category = connection
+                .QueryFirstOrDefault<Category>(
+                    "SELECT TOP 1 [Id], [Title] FROM [Category] WHERE [Id]=@id",
+                    new
+                    {
+                        id = "af3407aa-11ae-4621-a2ef-2028b85507c4"
+                    });
+            Console.WriteLine($"{category.Id} - {category.Title}");
+
         }
 
         static void CreateCategory(SqlConnection connection)
@@ -79,6 +97,17 @@ namespace BaltaDataAccess
             Console.WriteLine($"Registros atualizados {rows}");
         }
 
+        static void DeleteCategory(SqlConnection connection)
+        {
+            var deleteQuery = "DELETE [Category] WHERE [Id]=@id";
+            var rows = connection.Execute(deleteQuery, new
+            {
+                id = new Guid("ea8059a2-e679-4e74-99b5-e4f0b310fe6f"),
+            });
+
+            Console.WriteLine($"{rows} registros excluídos");
+        }
+
         static void CreateManyCategory(SqlConnection connection)
         {
             var category = new Category();
@@ -90,7 +119,7 @@ namespace BaltaDataAccess
             category.Order = 8;
             category.Summary = "AWS Cloud";
             category.Featured = false;
-
+            
             var category2 = new Category();
             category2.Id = Guid.NewGuid();
             category2.Title = "Categoria Nova";
@@ -99,21 +128,19 @@ namespace BaltaDataAccess
             category2.Order = 9;
             category2.Summary = "Categoria";
             category2.Featured = true;
-
-
             // SQL INJECTION (é um ataque conhecido e muito executado)
-
             var insertSql = @"INSERT INTO [Category] 
                                 VALUES(
                                 @Id, 
                                 @Title, 
                                 @Url, 
-                                @Summary, 
+                                @Description,
                                 @Order, 
-                                @Description, 
+                                @Summary, 
                                 @Featured)";
 
             var rows = connection.Execute(insertSql, new[]
+           
             {
                 new
                 {
@@ -124,7 +151,7 @@ namespace BaltaDataAccess
                 category.Order,
                 category.Description,
                 category.Featured
-                },
+                }, 
                 new
                 {
                 category2.Id,
@@ -139,6 +166,22 @@ namespace BaltaDataAccess
             Console.WriteLine($"Linhas inseridas {rows}");
         }
 
+        static void ExecuteReadProcedure(SqlConnection connection)
+        {
+            // Essa procedure não retorna informações, faz uma leitura de dados
+            // Chamar a procedure tem que usar o EXEC no DAPPER
+
+            var procedure = "[dbo].[spGetCoursesByCategory]";
+            var pars = new { CategoryId = "09ce0b7b-cfca-497b-92c0-3290ad9d5142"};
+            var courses = connection.Query(
+            procedure, 
+            pars, 
+            commandType: CommandType.StoredProcedure);
+            foreach(var item in courses)
+            {
+                Console.WriteLine(item.Id);
+            }
+        }
     }
 }
 
