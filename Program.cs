@@ -21,7 +21,8 @@ namespace BaltaDataAccess
                 //GetCategory(connection);
                 //DeleteCategory(connection);
                 //ExecuteProcedure(connection);
-                ExecuteReadProcedure(connection);
+                //ExecuteReadProcedure(connection);
+                ExecuteScalar(connection);
             }
         }
 
@@ -166,7 +167,20 @@ namespace BaltaDataAccess
             Console.WriteLine($"Linhas inseridas {rows}");
         }
 
+        static void ExecuteProcedure(SqlConnection connection)
+        {
+            var procedure = "[dbo].[spDeleteStudent]";
+            var pars = new { StudentId = "6bd552ea-7187-4bae-abb6-54e8f8b9f530" };
+            var affectedRows = connection.Execute(
+                procedure,
+                pars,
+                commandType: CommandType.StoredProcedure);
+
+            Console.WriteLine($"{affectedRows} linhas afetadas");
+        }
+
         static void ExecuteReadProcedure(SqlConnection connection)
+
         {
             // Essa procedure não retorna informações, faz uma leitura de dados
             // Chamar a procedure tem que usar o EXEC no DAPPER
@@ -179,9 +193,42 @@ namespace BaltaDataAccess
             commandType: CommandType.StoredProcedure);
             foreach(var item in courses)
             {
-                Console.WriteLine(item.Id);
+                Console.WriteLine(item.Title);
+                // Aqui ele lista pelo item que está no banco de dados, nesse exemplo é pelo Title
             }
+        }
+        
+        static void ExecuteScalar(SqlConnection connection)
+        {
+            var category = new Category();
+            category.Title = "Amazon AWS";
+            category.Url = "amazon";
+            category.Description = "Categoria destinada a serviços do AWS";
+            category.Order = 8;
+            category.Summary = "AWS Cloud";
+            category.Featured = false;
+
+            var insertSql = @"INSERT INTO [Category] 
+                              OUTPUT inserted.[Id] 
+                            VALUES(
+                                NEWID(), 
+                                @Title, 
+                                @Url, 
+                                @Summary, 
+                                @Order, 
+                                @Description, 
+                                @Featured)";
+                                // Esse OUTPUT serve para ver o último id criado 
+            var id = connection.ExecuteScalar<Guid>(insertSql, new
+            {
+                category.Title,
+                category.Url,
+                category.Summary,
+                category.Order,
+                category.Description,
+                category.Featured
+            });
+            Console.WriteLine($"A categoria inserida foi: {id}");
         }
     }
 }
-
