@@ -23,7 +23,8 @@ namespace BaltaDataAccess
                 //ExecuteProcedure(connection);
                 //ExecuteReadProcedure(connection);
                 //ExecuteScalar(connection);
-                ReadView(connection);
+                //ReadView(connection);
+                OneToOne(connection);
             }
         }
 
@@ -121,7 +122,7 @@ namespace BaltaDataAccess
             category.Order = 8;
             category.Summary = "AWS Cloud";
             category.Featured = false;
-            
+
             var category2 = new Category();
             category2.Id = Guid.NewGuid();
             category2.Title = "Categoria Nova";
@@ -142,7 +143,7 @@ namespace BaltaDataAccess
                                 @Featured)";
 
             var rows = connection.Execute(insertSql, new[]
-           
+
             {
                 new
                 {
@@ -153,7 +154,7 @@ namespace BaltaDataAccess
                 category.Order,
                 category.Description,
                 category.Featured
-                }, 
+                },
                 new
                 {
                 category2.Id,
@@ -187,18 +188,18 @@ namespace BaltaDataAccess
             // Chamar a procedure tem que usar o EXEC no DAPPER
 
             var procedure = "[dbo].[spGetCoursesByCategory]";
-            var pars = new { CategoryId = "09ce0b7b-cfca-497b-92c0-3290ad9d5142"};
+            var pars = new { CategoryId = "09ce0b7b-cfca-497b-92c0-3290ad9d5142" };
             var courses = connection.Query(
-            procedure, 
-            pars, 
+            procedure,
+            pars,
             commandType: CommandType.StoredProcedure);
-            foreach(var item in courses)
+            foreach (var item in courses)
             {
                 Console.WriteLine(item.Title);
                 // Aqui ele lista pelo item que está no banco de dados, nesse exemplo é pelo Title
             }
         }
-        
+
         static void ExecuteScalar(SqlConnection connection)
         {
             var category = new Category();
@@ -219,7 +220,7 @@ namespace BaltaDataAccess
                                 @Order, 
                                 @Description, 
                                 @Featured)";
-                                // Esse OUTPUT serve para ver o último id criado 
+            // Esse OUTPUT serve para ver o último id criado 
             var id = connection.ExecuteScalar<Guid>(insertSql, new
             {
                 category.Title,
@@ -241,6 +242,30 @@ namespace BaltaDataAccess
                 Console.WriteLine($"{item.Id} - {item.Title}");
             }
 
+        }
+
+        // Fazer o Inner Join no Dapper
+        static void OneToOne(SqlConnection connection)
+        {
+            var sql = @"
+            SELECT 
+            * 
+            FROM 
+                [CareerItem] 
+            INNER JOIN 
+                [Course] ON [CareerItem].[CourseId] = [Course].[Id]";
+
+                                        // Tabelas do banco de dados
+            var items = connection.Query<CareerItem, Course, CareerItem>(
+                sql,
+                (careerItem, course) => {
+                    careerItem.Course = course;
+                    return careerItem;
+                }, splitOn: "Id");
+            foreach(var item in items)
+            {
+                Console.WriteLine($"{item.Title} - Curso: {item.Course.Title}");
+            }
         }
     }
 }
